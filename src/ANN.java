@@ -1,6 +1,7 @@
 import com.sun.javaws.exceptions.ErrorCodeResponseException;
 import transfer.ITransfer;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -11,7 +12,7 @@ import java.util.Arrays;
 public class ANN {
     int[] l_size;
     double[][] layers;
-    double[][] weights;
+    ArrayList<double[][]> weights;
     double[][] errors;
     double[][] deltas;
     ArrayList<ITransfer> transfers;
@@ -21,7 +22,7 @@ public class ANN {
 
 
     public ANN(int[] sizes, ArrayList<ITransfer> transfers, double alpha) {
-        this.weights = new double[sizes.length - 1][];
+        this.weights = new ArrayList<>();
         this.layers = new double[sizes.length - 1][];
         this.deltas = new double[sizes.length][];
         this.transfers = new ArrayList<>(transfers);
@@ -29,47 +30,46 @@ public class ANN {
         this.l_size = sizes;
         this.y = new int[]{1};
         this.alpha = alpha;
+
+
     }
 
 
     //Random initialization of weights
     public void setupWeights() {
-        for (int i = 0; i < weights.length; i++) {
-            double[] tmp = new double[l_size[i] * l_size[i + 1]];
+        for (int i = 0; i < layers.length; i++) {
+            double[][] tmp = new double[l_size[i]][l_size[i + 1]];
             for (int j = 0; j < tmp.length; j++) {
-                tmp[j] = 2 * Math.random() - 1;
+                for (int k = 0; k < tmp[0].length; k++) {
+                    tmp[j][k] = 2 * Math.random() - 1;
+                }
             }
-            weights[i] = tmp;
+            weights.add(tmp);
             //System.out.println(weights[i][0]);
         }
-        //System.out.println(Arrays.deepToString(weights));
     }
 
 
     //taking the input through the layers
-    public void runThroughLayers(double[] input) {
-
+    public void runThroughLayers(double[] in) {
+        input = in;
         //Run through all layers, using weights
-        for (int i = 0; i < l_size.length-1; i++) {
+        for (int i = 0; i < l_size.length - 1; i++) {
             //Temporary array with layer results
-            int n = 0;
-            double[] t = new double[l_size[i+1]];
-            //calculate first hidden/output layer
-            for (int j = 0; j < l_size[i+1]; j++) {
+            double[] t = new double[l_size[i + 1]];
+            for (int k = 0; k < weights.get(i)[0].length; k++) {
                 double sum = 0;
-                //multiply each neron with it's weight and sum
-                for (int g = 0; g < l_size[i]; g++) {
-                    sum += weights[i][n] * input[g];
-                    n++;
+                for (int j = 0; j < input.length; j++) {
+                    sum += weights.get(i)[j][k] * input[j];
                 }
-                t[j] = transfers.get(i).tranfer(sum);
+                t[k] = transfers.get(i).tranfer(sum);
 
             }
             layers[i] = t;
             input = layers[i];
         }
-
     }
+
 
     public void calcErrorAndDelta(int y) {
         //TODO ALL TEMPORARY, NEEDS FIXING
@@ -82,18 +82,36 @@ public class ANN {
         tmpDelta = new double[]{errors[errors.length - 1][0] * transfers.get(transfers.size() - 1).derivative(layers[layers.length - 1][0])};
         deltas[deltas.length - 1] = tmpDelta;
         //Now for the rest of the layers.
+
+
         for (int i = layers.length - 1; i >= 0; i--) {
-            double sum = 0;
-            tmpDelta = new double[weights[i].length];
-            tmpError = new double[weights[i].length];
-            int n = 0;
-            for (int j = 0; j < l_size[i]; j++) {
-                for (int k = 0; k < l_size[i + 1]; k++) {
-                    tmpError[n] = layers[i][k] * weights[i][n];
-                    tmpDelta[n] = tmpError[n] * transfers.get(i).derivative(layers[i][k]);
-                    n++;
+            tmpDelta = new double[layers[i].length];
+            tmpError = new double[layers[i].length];
+
+
+            double[][] tmpLayer = Helpers.transpose(weights.get(i));
+            int count = 0;
+            for (double[] t : tmpLayer) {
+                double sum = 0;
+                for (double d : t) {
+                    for (double s : deltas[i + 1]) {
+                        sum += d * s;
+                    }
                 }
+                tmpError[count] = sum;
+                count++;
             }
+            count = 0;
+            for (double d : tmpError) {
+                double sum = 0;
+                for (double s : layers[i]) {
+                    sum += d * (transfers.get(i).derivative(s));
+                }
+                tmpDelta[count] = sum;
+                count++;
+            }
+
+
             errors[i] = tmpError;
             deltas[i] = tmpDelta;
         }
@@ -102,38 +120,46 @@ public class ANN {
 
     public void updateWeights() {
         for (int i = layers.length - 1; i >= 1; i--) {
-            int n = 0;
-            for (int j = 0; j < l_size[i+1]; j++) {
-                for (int k = 0; k < l_size[i]; k++) {
-                    weights[i][n] -= alpha * (layers[i-1][n] * deltas[i][n] );
-                    System.out.println(weights[i][n]);
-                    n++;
+            double[][] full = new double[l_size[i]][];
+            double sum = 0;
+            for (int l = 0; l < layers[i - 1].length; l++) {
+                double[] temp = new double[l_size[i + 1]];
+                for (int t = 0; t < deltas[i + 1].length; t++) {
+                    sum = weights.get(i)[l][t] + (alpha * (layers[i - 1][l] * deltas[i + 1][t]));
+                    temp[t] = sum;
                 }
+                full[l] = temp;
+
 
             }
+
+            weights.set(i, full);
         }
-        int n = 0;
-        for (int j = 0; j < l_size[0]; j++) {
-            for (int k = 0; k < l_size[1]; k++) {
-                weights[0][n] -= alpha * (input[k] * deltas[0][n] );
-                n++;
+        double[][] full = new double[l_size[0]][];
+        double sum = 0;
+        for (int l = 0; l < l_size[0]; l++) {
+            double[] temp = new double[l_size[1]];
+            for (int t = 0; t < deltas[1].length; t++) {
+                sum =weights.get(0)[l][t] + (alpha * (layers[0][l] * deltas[1][t]));
+                temp[t] = sum;
             }
+            full[l] = temp;
 
         }
-
-
+        weights.set(0,full);
     }
+
 
 
     public void run() {
         setupWeights();
-        input = new double[]{1,0,2,3,4};
+        input = new double[]{1, 0, 0};
 
         for (int j = 0; j < 1000; j++) {
             runThroughLayers(input);
             calcErrorAndDelta(y[0]);
             updateWeights();
-            System.out.println("RESULT :" +  layers[layers.length - 1][0]);
+            System.out.println("RESULT :" + layers[layers.length - 1][0]);
         }
 //        runThroughLayers(input);
 //        calcErrorAndDelta(y[0]);
