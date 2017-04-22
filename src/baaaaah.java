@@ -1,4 +1,9 @@
+import transfer.ITransfer;
+import transfer.Sigmoid;
+
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 /**
  * Created by slapocolypse on 4/18/17.
@@ -8,27 +13,19 @@ public class baaaaah {
     ArrayList<Double> hiddens = new ArrayList<>();
     ArrayList<String> transfers = new ArrayList<>();
 
-    public static void main(String[] args){
+    public static void main(String[] args) {
 
-        int[] sizes = new int[]{10,5,4,2,1};
-        ANN a = new ANN(sizes);
+        int[] sizes = new int[]{5,2,1};
+        ArrayList<ITransfer> transfers = new ArrayList<>();
+        transfers.add(new Sigmoid());
+        transfers.add(new Sigmoid());
+
+
+
+        double alpha = 0.5;
+        ANN a = new ANN(sizes, transfers,alpha);
         a.run();
 
     }
-
-    public void addLayer(double d,String s){
-        hiddens.add(d);
-        hiddens.toArray()
-        transfers.add(s)
-    }
-
-    public void generateInlayer(){
-        inout[0] = 3
-    }
-    public void generateOutlayer(){
-        inout[1] = 2
-    }
-    public void generateHiddenlayer(){
-        hidddens.add()
-    }
 }
+
