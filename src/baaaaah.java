@@ -15,14 +15,17 @@ public class baaaaah {
 
     public static void main(String[] args) {
 
-        int[] sizes = new int[]{3,4,1};
+        int[] sizes = new int[]{3,10,40,10,1};
         ArrayList<ITransfer> transfers = new ArrayList<>();
         transfers.add(new Sigmoid());
         transfers.add(new Sigmoid());
+        transfers.add(new Sigmoid());
+        transfers.add(new Sigmoid());
+        transfers.add(new Sigmoid());
 
 
 
-        double alpha = 0.05;
+        double alpha = 0.15;
         ANN a = new ANN(sizes, transfers,alpha);
         a.run();
 

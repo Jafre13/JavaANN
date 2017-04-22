@@ -139,8 +139,8 @@ public class ANN {
         double sum = 0;
         for (int l = 0; l < l_size[0]; l++) {
             double[] temp = new double[l_size[1]];
-            for (int t = 0; t < deltas[1].length; t++) {
-                sum =weights.get(0)[l][t] + (alpha * (layers[0][l] * deltas[1][t]));
+            for (int t = 0; t < deltas[0].length; t++) {
+                sum =weights.get(0)[l][t] + (alpha * (layers[0][l] * deltas[0][t]));
                 temp[t] = sum;
             }
             full[l] = temp;
